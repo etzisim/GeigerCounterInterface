@@ -21,7 +21,7 @@ bool enough_counts = false;
 unsigned int SendIntervallMillis = 0;
 unsigned int SendIntervall = 5000;
 bool print = false;
-const float multiplly_factor = 0.00312634259259245; //my calculation for J321 Geigertube
+const float multiplly_factor = 0.00226470588235294; //my calculation for J321 Geigertube
 
 ICACHE_RAM_ATTR void CountUP()
 {
