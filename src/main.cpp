@@ -13,17 +13,17 @@ WiFiManager wifiManager;
 const int BufferSize = 600;
 unsigned int CountsBuffer[BufferSize];
 unsigned int CountsBufferIndex = 0;
-static int intervall = 60000 / BufferSize;
-unsigned long changeBufferIndexMillis = 1000;
+static unsigned long intervall = 60000 / BufferSize;
+unsigned long changeBufferIndexMillis = 0;
 int countsMinute = 0;
 bool enough_counts = false;
 
 unsigned int SendIntervallMillis = 0;
 unsigned int SendIntervall = 5000;
 bool print = false;
-const float multiplly_factor = 0.00226470588235294; //my calculation for J321 Geigertube
+const float multiplly_factor = 0.00458333333333333; //my calculation for J321 Geigertube
 
-ICACHE_RAM_ATTR void CountUP()
+IRAM_ATTR void CountUP()
 {
   CountsBuffer[CountsBufferIndex]++;
   print = true;
@@ -48,7 +48,7 @@ void setup()
     Serial.println("failed to connect and hit timeout");
     delay(3000);
     // reset and try again, or maybe put it to deep sleep
-    ESP.reset;
+    ESP.restart();
     delay(5000);
   }
   init_mqtt();
