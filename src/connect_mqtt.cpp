@@ -15,7 +15,7 @@ void callback(char *topic, byte *payload, unsigned int length)
   Serial.println(topic);
 
   Serial.print("Message:");
-  for (int i = 0; i < length; i++)
+  for (unsigned int i = 0; i < length; i++)
   {
     Serial.print((char)payload[i]);
   }
@@ -48,7 +48,7 @@ void loop_mqtt()
 void set_upgrade_sub()
 {
   // Once connected, publish an announcement...
-  //client.publish("outTopic", "hello world");
+  // client.publish("outTopic", "hello world");
   Serial.println("upgrade topic = " + Topic_upgrade);
   client.subscribe(Topic_upgrade.c_str());
 }
@@ -79,7 +79,7 @@ void connect_mqtt()
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
-      //ESP.deepSleep(3.5 * 3600 * 1000000);
+      // ESP.deepSleep(3.5 * 3600 * 1000000);
       delay(5000);
     }
   }
