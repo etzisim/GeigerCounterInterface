@@ -1,14 +1,20 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
+#include <ESP8266WiFi.h>
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
 #include <WiFiManager.h>
+#include <ArduinoOTA.h>
+#include <ESP8266mDNS.h>
 #include <string.h>
 #include "connect_mqtt.h"
 
-String ProjectHostname = "GeigerCounterInterface";
-#define debug true
+#define GeigerCounterGPIO D2 // define GPIO to CAJOE board
+#define debug false
 
+String ProjectHostname = "GeigerCounterInterface";
 WiFiManager wifiManager;
-#define GeigerCounterGPIO D2
+ADC_MODE(ADC_VCC);
 
 const int BufferSize = 600;
 unsigned int CountsBuffer[BufferSize];
@@ -17,11 +23,12 @@ static unsigned long intervall = 60000 / BufferSize;
 unsigned long changeBufferIndexMillis = 0;
 int countsMinute = 0;
 bool enough_counts = false;
+static int timeout = 60;
 
 unsigned int SendIntervallMillis = 0;
 unsigned int SendIntervall = 5000;
 bool print = false;
-const float multiplly_factor = 0.00458333333333333; //my calculation for J321 Geigertube
+const float multiplly_factor = 0.00458333333333333; // my calculation for J321 Geigertube
 
 IRAM_ATTR void CountUP()
 {
@@ -29,12 +36,38 @@ IRAM_ATTR void CountUP()
   print = true;
 }
 
+void send_status_mqtt()
+{
+  String Status_topic = "home/" + ProjectHostname + "/esp_" + String(ESP.getChipId(), HEX) + "/status";
+  String Status_message = "{\"esp_id\":\"" + String(ESP.getChipId(), HEX) + "\",\"IP\":\"" + WiFi.localIP().toString() + "\",\"uptime\":\"" + (millis() / 1000) + "\",\"send_intervall\":\"" + (SendIntervall / 1000) + "\",\"free_heap\":\"" + ESP.getFreeHeap() + "\",\"MHz\":\"" + ESP.getCpuFreqMHz() + "\",\"Vcc\":\"" + ESP.getVcc() + "\"}";
+
+  send_mqtt(Status_topic, Status_message, 0);
+}
+
 void setup()
 {
   Serial.begin(115200);
   Serial.println("");
-  WiFi.hostname(ProjectHostname + "_" + String(ESP.getChipId(), HEX));
-  wifiManager.setTimeout(60);
+
+  const String prj_name = ProjectHostname + "_" + String(ESP.getChipId(), HEX);
+  WiFi.hostname(prj_name.c_str());
+  ArduinoOTA.setHostname(prj_name.c_str());
+
+  ArduinoOTA.onStart([]()
+                     {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+    {
+      type = "sketch";
+    }
+    else
+    { // U_FS
+      type = "filesystem";
+    } });
+
+  wifiManager.setTimeout(timeout);
+  wifiManager.setConfigPortalTimeout(timeout);
+  wifiManager.setConnectTimeout(timeout);
 
   // Print Infos
   Serial.print(ProjectHostname);
@@ -54,11 +87,15 @@ void setup()
   init_mqtt();
   attachInterrupt(digitalPinToInterrupt(GeigerCounterGPIO), CountUP, FALLING);
   changeBufferIndexMillis = millis();
+  ArduinoOTA.begin();
+
+  send_status_mqtt();
 }
 
 void loop()
 {
   loop_mqtt();
+  ArduinoOTA.handle();
   // put your main code here, to run repeatedly:
   if (millis() - changeBufferIndexMillis >= intervall)
   {
@@ -89,12 +126,10 @@ void loop()
         float mSv_h = multiplly_factor * countsMinute;
 
         // send MQTT
-        String Status_topic = "home/" + ProjectHostname + "/esp_" + String(ESP.getChipId(), HEX) + "/status";
+        send_status_mqtt();
         String Data_topic = "home/" + ProjectHostname + "/esp_" + String(ESP.getChipId(), HEX) + "/cpm";
-        String Status_message = "{\"esp_id\":\"" + String(ESP.getChipId(), HEX) + "\",\"IP\":\"" + WiFi.localIP().toString() + "\"}";
         String Data_message = "{\"CPM\":\"" + String(countsMinute) + "\",\"mSv_h\":\"" + String(mSv_h) + "\"}";
 
-        send_mqtt(Status_topic, Status_message, 0);
         send_mqtt(Data_topic, Data_message, 0);
         print = false;
       }
