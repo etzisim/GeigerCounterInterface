@@ -67,6 +67,7 @@ void setup()
 {
   Serial.begin(115200);
   Serial.println("");
+  Serial.println("");
 
   const String prj_name = ProjectHostname + "_" + String(ESP.getChipId(), HEX);
   WiFi.hostname(prj_name.c_str());
@@ -94,6 +95,10 @@ void setup()
   Serial.println(String(ESP.getChipId(), HEX));
   Serial.print("GeigerCounterGPIO is ");
   Serial.println(GeigerCounterGPIO);
+#if (!debug)
+  wifiManager.setDebugOutput(false);
+  Serial.println("Debug disabled no more output");
+#endif
 
   wifiConnect();
   attachInterrupt(digitalPinToInterrupt(GeigerCounterGPIO), CountUP, FALLING);
@@ -143,6 +148,12 @@ void loop()
 
       String Data_topic = "home/" + ProjectHostname + "/esp_" + String(ESP.getChipId(), HEX) + "/cpm";
       String Data_message = "{\"CPM\":\"" + String(countsMinute) + "\",\"mSv_h\":\"" + String(mSv_h) + "\",\"AVG_mSv_h\":\"" + String(longAVG.getAverage()) + "\",\"sizeof_list\":\"" + String(longAVG.GetSize()) + "\"}";
+
+#if (debug)
+      Serial.println(Data_topic);
+      Serial.println(Data_message);
+#endif
+
       send_mqtt(Data_topic, Data_message, 0);
 
       print = false;
@@ -153,7 +164,6 @@ void loop()
     }
 
 #if (debug)
-
     if (enough_counts)
     {
       Serial.print("Counts last Minute: ");
