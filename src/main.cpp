@@ -9,6 +9,7 @@
 #include <string.h>
 #include "avg_calc.h"
 #include "connect_mqtt.h"
+#include "make_json.h"
 
 #define GeigerCounterGPIO D2 // define GPIO to CAJOE board
 #define debug false
@@ -27,11 +28,21 @@ bool enough_counts = false;
 static int timeout = 60;
 
 unsigned int SendIntervallMillis = 0;
-unsigned int SendIntervall = 2500;
+unsigned int SendIntervall = 5000;
 bool print = false;
 const float multiplly_factor = 0.00458333333333333; // my calculation for J321 Geigertube
 
-avg_calc longAVG(360);
+int calc_intervals(int n)
+{
+  return n * 60 * 1000 / SendIntervall;
+}
+
+avg_calc AVG_5m(calc_intervals(5));
+avg_calc AVG_10m(calc_intervals(10));
+avg_calc AVG_15m(calc_intervals(15));
+avg_calc AVG_20m(calc_intervals(20));
+avg_calc AVG_25m(calc_intervals(25));
+avg_calc AVG_30m(calc_intervals(30));
 
 IRAM_ATTR void CountUP() // interupt to count tics of Geiger CAJOE board
 {
@@ -42,8 +53,18 @@ IRAM_ATTR void CountUP() // interupt to count tics of Geiger CAJOE board
 void send_status_mqtt()
 {
   String Status_topic = "home/" + ProjectHostname + "/esp_" + String(ESP.getChipId(), HEX) + "/status";
-  String Status_message = "{\"esp_id\":\"" + String(ESP.getChipId(), HEX) + "\",\"IP\":\"" + WiFi.localIP().toString() + "\",\"uptime\":\"" + (millis() / 1000) + "\",\"send_intervall\":\"" + (SendIntervall / 1000) + "\",\"free_heap\":\"" + ESP.getFreeHeap() + "\",\"MHz\":\"" + ESP.getCpuFreqMHz() + "\",\"Vcc\":\"" + ESP.getVcc() + "\",\"BufferReady\":\"" + enough_counts + "\",\"AVGBufferMinutes\":\"" + String(longAVG.GetSize() * SendIntervall / 1000 / 60) + "\"}";
 
+  // generate json message
+  String Status_message = start_json("esp_id", String(ESP.getChipId(), HEX));
+  Status_message = add_to_json(Status_message, "IP", WiFi.localIP().toString());
+  Status_message = add_to_json(Status_message, "uptime", String(millis() / 1000));
+  Status_message = add_to_json(Status_message, "send_intervall", String(SendIntervall / 1000));
+  Status_message = add_to_json(Status_message, "free_heap", String(ESP.getFreeHeap()));
+  Status_message = add_to_json(Status_message, "MHz", String(ESP.getCpuFreqMHz()));
+  Status_message = add_to_json(Status_message, "Vcc", String(ESP.getVcc()));
+  Status_message = add_to_json(Status_message, "BufferReady", String(enough_counts));
+  Status_message = add_to_json(Status_message, "AVGBufferMinutes", String(AVG_30m.GetSize() * SendIntervall / 1000 / 60));
+  Status_message = end_json(Status_message);
   send_mqtt(Status_topic, Status_message, 0);
 }
 
@@ -71,6 +92,7 @@ void setup()
 
   const String prj_name = ProjectHostname + "_" + String(ESP.getChipId(), HEX);
   WiFi.hostname(prj_name.c_str());
+  WiFi.setHostname(prj_name.c_str());
   ArduinoOTA.setHostname(prj_name.c_str());
 
   ArduinoOTA.onStart([]()
@@ -141,13 +163,37 @@ void loop()
       }
       float mSv_h = multiplly_factor * countsMinute;
 
-      longAVG.addVal(mSv_h);
+      AVG_5m.addVal(mSv_h);
+      AVG_10m.addVal(mSv_h);
+      AVG_15m.addVal(mSv_h);
+      AVG_20m.addVal(mSv_h);
+      AVG_25m.addVal(mSv_h);
+      AVG_30m.addVal(mSv_h);
 
       // send MQTT
       send_status_mqtt();
 
       String Data_topic = "home/" + ProjectHostname + "/esp_" + String(ESP.getChipId(), HEX) + "/cpm";
-      String Data_message = "{\"CPM\":\"" + String(countsMinute) + "\",\"mSv_h\":\"" + String(mSv_h) + "\",\"AVG_mSv_h\":\"" + String(longAVG.getAverage()) + "\",\"sizeof_list\":\"" + String(longAVG.GetSize()) + "\"}";
+
+      // generate json message
+      /*
+      String Data_message = "{\"CPM\":\"" + String(countsMinute)
+      + "\",\"mSv_h\":\"" + String(mSv_h)
+      + "\",\"AVG_mSv_h\":\"" + String(longAVG.getAverage())
+      + "\",\"sizeof_list\":\"" + String(longAVG.GetSize())
+      + "\"}";
+     */
+      String Data_message = start_json("CPM", String(countsMinute));
+      Data_message = add_to_json(Data_message, "mSv_h", String(mSv_h));
+      Data_message = add_to_json(Data_message, "AVG_mSv_h", String(AVG_30m.getAverage()));
+      Data_message = add_to_json(Data_message, "AVG_5m_mSv_h", String(AVG_5m.getAverage()));
+      Data_message = add_to_json(Data_message, "AVG_10m_mSv_h", String(AVG_10m.getAverage()));
+      Data_message = add_to_json(Data_message, "AVG_15m_mSv_h", String(AVG_15m.getAverage()));
+      Data_message = add_to_json(Data_message, "AVG_20m_mSv_h", String(AVG_20m.getAverage()));
+      Data_message = add_to_json(Data_message, "AVG_25m_mSv_h", String(AVG_25m.getAverage()));
+      Data_message = add_to_json(Data_message, "AVG_30m_mSv_h", String(AVG_30m.getAverage()));
+      Data_message = add_to_json(Data_message, "sizeof_list", String(AVG_30m.GetSize()));
+      Data_message = end_json(Data_message);
 
 #if (debug)
       Serial.println(Data_topic);
