@@ -33,6 +33,7 @@ float avg_calc::getAverage()
     return average;
 };
 
-avg_calc::avg_calc(int size){
+avg_calc::avg_calc(int size)
+{
     avg_calc::SetBufferSize(size);
 };

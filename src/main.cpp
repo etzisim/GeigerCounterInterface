@@ -55,17 +55,18 @@ void send_status_mqtt()
   String Status_topic = "home/" + ProjectHostname + "/esp_" + String(ESP.getChipId(), HEX) + "/status";
 
   // generate json message
-  String Status_message = start_json("esp_id", String(ESP.getChipId(), HEX));
-  Status_message = add_to_json(Status_message, "IP", WiFi.localIP().toString());
-  Status_message = add_to_json(Status_message, "uptime", String(millis() / 1000));
-  Status_message = add_to_json(Status_message, "send_intervall", String(SendIntervall / 1000));
-  Status_message = add_to_json(Status_message, "free_heap", String(ESP.getFreeHeap()));
-  Status_message = add_to_json(Status_message, "MHz", String(ESP.getCpuFreqMHz()));
-  Status_message = add_to_json(Status_message, "Vcc", String(ESP.getVcc()));
-  Status_message = add_to_json(Status_message, "BufferReady", String(enough_counts));
-  Status_message = add_to_json(Status_message, "AVGBufferMinutes", String(AVG_30m.GetSize() * SendIntervall / 1000 / 60));
-  Status_message = end_json(Status_message);
-  send_mqtt(Status_topic, Status_message, 0);
+  genJson JsonStatus;
+  JsonStatus.add("esp_id", String(ESP.getChipId(), HEX));
+  JsonStatus.add("IP", WiFi.localIP().toString());
+  JsonStatus.add("uptime", String(millis() / 1000));
+  JsonStatus.add("send_intervall", String(SendIntervall / 1000));
+  JsonStatus.add("free_heap", String(ESP.getFreeHeap()));
+  JsonStatus.add("MHz", String(ESP.getCpuFreqMHz()));
+  JsonStatus.add("Vcc", String(ESP.getVcc()));
+  JsonStatus.add("BufferReady", String(enough_counts));
+  JsonStatus.add("AVGBufferMinutes", String(AVG_30m.GetSize() * SendIntervall / 1000 / 60));
+
+  send_mqtt(Status_topic, JsonStatus.getJson(), 0);
 }
 
 void wifiConnect()
@@ -176,31 +177,24 @@ void loop()
       String Data_topic = "home/" + ProjectHostname + "/esp_" + String(ESP.getChipId(), HEX) + "/cpm";
 
       // generate json message
-      /*
-      String Data_message = "{\"CPM\":\"" + String(countsMinute)
-      + "\",\"mSv_h\":\"" + String(mSv_h)
-      + "\",\"AVG_mSv_h\":\"" + String(longAVG.getAverage())
-      + "\",\"sizeof_list\":\"" + String(longAVG.GetSize())
-      + "\"}";
-     */
-      String Data_message = start_json("CPM", String(countsMinute));
-      Data_message = add_to_json(Data_message, "mSv_h", String(mSv_h));
-      Data_message = add_to_json(Data_message, "AVG_mSv_h", String(AVG_30m.getAverage()));
-      Data_message = add_to_json(Data_message, "AVG_5m_mSv_h", String(AVG_5m.getAverage()));
-      Data_message = add_to_json(Data_message, "AVG_10m_mSv_h", String(AVG_10m.getAverage()));
-      Data_message = add_to_json(Data_message, "AVG_15m_mSv_h", String(AVG_15m.getAverage()));
-      Data_message = add_to_json(Data_message, "AVG_20m_mSv_h", String(AVG_20m.getAverage()));
-      Data_message = add_to_json(Data_message, "AVG_25m_mSv_h", String(AVG_25m.getAverage()));
-      Data_message = add_to_json(Data_message, "AVG_30m_mSv_h", String(AVG_30m.getAverage()));
-      Data_message = add_to_json(Data_message, "sizeof_list", String(AVG_30m.GetSize()));
-      Data_message = end_json(Data_message);
+      genJson JsonData;
+      JsonData.add("CPM", String(countsMinute));
+      JsonData.add("mSv_h", String(mSv_h));
+      JsonData.add("AVG_mSv_h", String(AVG_30m.getAverage()));
+      JsonData.add("AVG_5m_mSv_h", String(AVG_5m.getAverage()));
+      JsonData.add("AVG_10m_mSv_h", String(AVG_10m.getAverage()));
+      JsonData.add("AVG_15m_mSv_h", String(AVG_15m.getAverage()));
+      JsonData.add("AVG_20m_mSv_h", String(AVG_20m.getAverage()));
+      JsonData.add("AVG_25m_mSv_h", String(AVG_25m.getAverage()));
+      JsonData.add("AVG_30m_mSv_h", String(AVG_30m.getAverage()));
+      JsonData.add("sizeof_list", String(AVG_30m.GetSize()));
 
 #if (debug)
       Serial.println(Data_topic);
-      Serial.println(Data_message);
+      Serial.println(JsonData.getJson());
 #endif
 
-      send_mqtt(Data_topic, Data_message, 0);
+      send_mqtt(Data_topic, JsonData.getJson(), 0);
 
       print = false;
     }

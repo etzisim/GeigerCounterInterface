@@ -12,7 +12,6 @@ public:
     int GetSize();
     avg_calc(int size);
 
-
 private:
     unsigned int BufferSize;
     std::list<float> _Buffer;

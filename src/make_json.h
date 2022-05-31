@@ -4,8 +4,15 @@
 #include <Arduino.h>
 #include <string.h>
 
-String start_json(String name, String value);
-String add_to_json(String input, String name, String value);
-String end_json(String input);
+class genJson
+{
+public:
+    String getJson();
+    void add(String name, String value);
+    void clear();
+    genJson();
+private:
+    String json_data;
+};
 
 #endif
