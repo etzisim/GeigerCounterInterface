@@ -1,11 +1,12 @@
 #include "avg_calc.h"
 #include <list>
+#include <ESP8266WiFi.h>
 
 void avg_calc::addVal(float new_val)
 {
     _Buffer.push_front(new_val);
 
-    while (_Buffer.size() > BufferSize)
+    while ((_Buffer.size()) > BufferSize)
     {
         _Buffer.pop_back();
     }

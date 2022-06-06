@@ -11,6 +11,7 @@ public:
     void add(String name, String value);
     void clear();
     genJson();
+
 private:
     String json_data;
 };

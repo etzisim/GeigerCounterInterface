@@ -28,7 +28,7 @@ bool enough_counts = false;
 static int timeout = 60;
 
 unsigned int SendIntervallMillis = 0;
-unsigned int SendIntervall = 5000;
+unsigned int SendIntervall = 10000;
 bool print = false;
 const float multiplly_factor = 0.00458333333333333; // my calculation for J321 Geigertube
 
@@ -91,7 +91,7 @@ void setup()
   Serial.println("");
   Serial.println("");
 
-  const String prj_name = ProjectHostname + "_" + String(ESP.getChipId(), HEX);
+  const String prj_name = ProjectHostname + "-" + String(ESP.getChipId(), HEX);
   WiFi.hostname(prj_name.c_str());
   WiFi.setHostname(prj_name.c_str());
   ArduinoOTA.setHostname(prj_name.c_str());
