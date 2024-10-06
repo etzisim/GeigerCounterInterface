@@ -12,7 +12,7 @@
 #include "make_json.h"
 
 #define GeigerCounterGPIO D2 // define GPIO to CAJOE board
-#define debug false
+#define debug true//false
 
 String ProjectHostname = "GeigerCounterInterface";
 WiFiManager wifiManager;
@@ -93,7 +93,6 @@ void setup()
 
   const String prj_name = ProjectHostname + "-" + String(ESP.getChipId(), HEX);
   WiFi.hostname(prj_name.c_str());
-  WiFi.setHostname(prj_name.c_str());
   ArduinoOTA.setHostname(prj_name.c_str());
 
   ArduinoOTA.onStart([]()
